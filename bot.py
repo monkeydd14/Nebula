@@ -2,7 +2,7 @@ import os
 import telebot
 import requests
 
-# Railway Environment Variable (BOT_TOKEN) ထဲကနေ လှမ်းဖတ်ပါမယ်
+# Railway Environment Variable ကနေ Token ဖတ်ခြင်း
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -25,19 +25,28 @@ def check_ml_id(message):
 
     player_id = args[1]
     server_id = args[2]
-    status_msg = bot.reply_to(message, "⏳ API မှ အချက်အလက်များကို စစ်ဆေးနေပါသည်...")
+    status_msg = bot.reply_to(message, "⏳ API အသစ်မှ အချက်အလက်များကို စစ်ဆေးနေပါသည်...")
 
-    api_url = f"https://api.isan.eu.org/ml?id={player_id}&server={server_id}"
+    # API အသစ် Endpoint
+    api_url = f"https://yanjiestore.com/submitt.php?ID={player_id}&server={server_id}"
 
     try:
-        response = requests.get(api_url, timeout=10)
+        # User-Agent အတုထည့်ပေးခြင်းဖြင့် API Block ဖြစ်ခြင်းကို ကာကွယ်ရန်
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        response = requests.get(api_url, headers=headers, timeout=10)
+        
         if response.status_code == 200:
             data = response.json()
-            if data.get("success") or "name" in data:
-                nickname = data.get("name", "မသိပါ")
+            
+            # API က နာမည်ပြန်ပေးတဲ့ Key ကို စစ်ဆေးခြင်း (ဥပမာ- "username" သို့မဟုတ် "name")
+            nickname = data.get("username") or data.get("name") or data.get("Nickname")
+            
+            if nickname:
                 result_text = (
                     "✅ **MLBB User Found!**\n\n"
-                    "👤 **Nickname:** `" + nickname + "`\n"
+                    "👤 **Nickname:** `" + str(nickname) + "`\n"
                     "🆔 **Player ID:** `" + player_id + "`\n"
                     "🌐 **Server:** `" + server_id + "`"
                 )
@@ -45,10 +54,15 @@ def check_ml_id(message):
                 result_text = "❌ အချက်အလက် ရှာမတွေ့ပါ။ ID သို့မဟုတ် Server မှားနေနိုင်ပါသည်။"
         else:
             result_text = "⚠️ API Error! ခေတ္တစောင့်ပြီးမှ ပြန်လည်ကြိုးစားပေးပါ။"
+            
     except requests.exceptions.RequestException:
-        result_text = "🌐 API Server နဲ့ ချက်ဆက်မှု မအောင်မြင်ပါ။"
+        result_text = "🌐 API Server နဲ့ ချိတ်ဆက်မှု မအောင်မြင်ပါ။"
+    except ValueError:
+        result_text = "⚠️ API မှ မှန်ကန်သော အချက်အလက်များ မပေးပို့ပါ။"
 
     bot.edit_message_text(result_text, chat_id=message.chat.id, message_id=status_msg.message_id, parse_mode="Markdown")
 
-# Bot ကို စတင်ပတ်မောင်းခြင်း
+# Bot ပတ်မောင်းခြင်း
 bot.infinity_polling()
+
+
